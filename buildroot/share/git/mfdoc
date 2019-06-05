@@ -5,15 +5,22 @@
 # Start Jekyll in watch mode to work on Marlin Documentation and preview locally
 #
 
-[[ $# == 0 ]] || { echo "Usage: `basename $0`" 1>&2 ; exit 1; }
-
-MFINFO=$(mfinfo "$@") || exit 1
+MFINFO=$(mfinfo "$@") || exit
 IFS=' ' read -a INFO <<< "$MFINFO"
 ORG=${INFO[0]}
 REPO=${INFO[2]}
-BRANCH=${INFO[5]}
+BRANCH=${INFO[4]}
 
-[[ $ORG == "MarlinFirmware" && $REPO == "MarlinDocumentation" ]] || { echo "Wrong repository." 1>&2; exit 1; }
+if [[ $ORG != "MarlinFirmware" || $REPO != "MarlinDocumentation" ]]; then
+  echo "Wrong repository."
+  exit
+fi
+
+if [[ $BRANCH != "master" ]]; then
+  echo "Stashing changes and changing to master."
+  git stash
+  git checkout master
+fi
 
 opensite() {
   TOOL=$(which gnome-open xdg-open open | awk '{ print $1 }')
@@ -29,10 +36,13 @@ opensite() {
 
 echo "Previewing MarlinDocumentation..."
 
-bundle exec jekyll serve --watch --incremental | {
-  while IFS= read -r line
-  do
-    [[ $line =~ "Server running" ]] && opensite
-    echo "$line"
-  done
-}
+# wait to open the url for about 8s
+( sleep 8; opensite ) &
+
+bundle exec jekyll serve --watch --incremental
+
+if [[ $BRANCH != "master" ]]; then
+  echo "Restoring branch '$BRANCH'"
+  git checkout $BRANCH
+  git stash pop
+fi

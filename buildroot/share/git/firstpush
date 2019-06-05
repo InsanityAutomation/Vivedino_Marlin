@@ -6,13 +6,11 @@
 # commit log to watch Travis CI progress.
 #
 
-[[ $# == 0 ]] || { echo "Usage: `basename $0`" 1>&2 ; exit 1; }
-
-MFINFO=$(mfinfo) || exit 1
+MFINFO=$(mfinfo) || exit
 IFS=' ' read -a INFO <<< "$MFINFO"
 FORK=${INFO[1]}
 REPO=${INFO[2]}
-BRANCH=${INFO[5]}
+BRANCH=${INFO[4]}
 
 git push --set-upstream origin $BRANCH
 
