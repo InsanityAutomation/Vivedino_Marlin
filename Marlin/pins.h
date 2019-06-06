@@ -142,6 +142,10 @@
   #include "pins_OMCA_A.h"
 #elif MB(OMCA)
   #include "pins_OMCA.h"
+#elif MB(FORMBOT_TREX2PLUS)
+  #include "pins_FORMBOT_TREX2PLUS.h" // ATmega2560                                 env:megaatmega2560
+#elif MB(FORMBOT_TREX3)
+  #include "pins_FORMBOT_TREX3.h"     // ATmega2560                                 env:megaatmega2560
 #elif MB(RAMBO)
   #include "pins_RAMBO.h"
 #elif MB(MINIRAMBO)

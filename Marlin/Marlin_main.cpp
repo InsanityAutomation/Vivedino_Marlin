@@ -870,26 +870,16 @@ void setup_killpin() {
 #if ENABLED(FILAMENT_RUNOUT_SENSOR)
 
   void setup_filrunoutpin() {
-    /*
     #if ENABLED(ENDSTOPPULLUP_FIL_RUNOUT)
       SET_INPUT_PULLUP(FIL_RUNOUT_PIN);
-      SET_INPUT_PULLUP(FIL_RUNOUT1_PIN);
+      SET_INPUT_PULLUP(FIL_RUNOUT2_PIN);
     #else
       SET_INPUT(FIL_RUNOUT_PIN);
-      SET_INPUT(FIL_RUNOUT1_PIN);
+      SET_INPUT(FIL_RUNOUT2_PIN);
     #endif
-    */
-
   }
 
 #endif
-
-  void setup_duanpin() {
-    pinMode(E0_RUNOUT_PIN,INPUT);
-    pinMode(E1_RUNOUT_PIN,INPUT);
-    digitalWrite(E0_RUNOUT_PIN,HIGH);
-    digitalWrite(E1_RUNOUT_PIN,HIGH);
-  }
 
 void setup_homepin(void) {
   #if HAS_HOME
@@ -1364,7 +1354,8 @@ bool get_target_extruder_from_command(int code) {
 }
 
 #if ENABLED(DUAL_X_CARRIAGE) || ENABLED(DUAL_NOZZLE_DUPLICATION_MODE)
-  bool extruder_duplication_enabled = false; // Used in Dual X mode 2
+  bool extruder_duplication_enabled,
+       mirrored_duplication_mode;
 #endif
 
 #if ENABLED(DUAL_X_CARRIAGE)
@@ -5626,8 +5617,6 @@ inline void gcode_G92() {
 
 #endif // HAS_RESUME_CONTINUE
 
-
-
 /**
  * M17: Enable power on all stepper motors
  */
@@ -8927,101 +8916,78 @@ inline void gcode_M503() {
 
 #endif // FILAMENT_CHANGE_FEATURE
 
-
-  inline void gcode_M601() {
-    stepper.synchronize();
-    current_position[E_AXIS]=current_position[E_AXIS]-FILAMENT_CHANGE_UNLOAD_LENGTH;
-    planner.buffer_line(
-              current_position[X_AXIS] ,
-              current_position[Y_AXIS], 
-              current_position[Z_AXIS], 
-              current_position[E_AXIS],
-              FILAMENT_CHANGE_UNLOAD_FEEDRATE,
-              0
-            );
-  }
-  inline void gcode_M602() {
-    stepper.synchronize();
-    current_position[E_AXIS]=current_position[E_AXIS]-FILAMENT_CHANGE_UNLOAD_LENGTH;
-    planner.buffer_line(
-              current_position[X_AXIS] ,
-              current_position[Y_AXIS], 
-              current_position[Z_AXIS], 
-              current_position[E_AXIS],
-              FILAMENT_CHANGE_UNLOAD_FEEDRATE,
-              1
-            ); 
-  }
-    inline void gcode_M603() {
-     stepper.synchronize();
-     current_position[E_AXIS]=current_position[E_AXIS]+FILAMENT_CHANGE_LOAD_LENGTH;
-     planner.buffer_line(
-              current_position[X_AXIS] ,
-              current_position[Y_AXIS], 
-              current_position[Z_AXIS], 
-              current_position[E_AXIS],
-              FILAMENT_CHANGE_LOAD_FEEDRATE,
-              0
-            );
-  }
-
-  
-    inline void gcode_M604() {
-     stepper.synchronize();
-     current_position[E_AXIS]=current_position[E_AXIS]+FILAMENT_CHANGE_LOAD_LENGTH;
-     planner.buffer_line(
-              current_position[X_AXIS] ,
-              current_position[Y_AXIS], 
-              current_position[Z_AXIS], 
-              current_position[E_AXIS],
-              FILAMENT_CHANGE_LOAD_FEEDRATE,
-              1
-            );
-  }
-
-
 #if ENABLED(DUAL_X_CARRIAGE)
 
-  /**
+/**
    * M605: Set dual x-carriage movement mode
    *
-   *    M605 S0: Full control mode. The slicer has full control over x-carriage movement
-   *    M605 S1: Auto-park mode. The inactive head will auto park/unpark without slicer involvement
-   *    M605 S2 [Xnnn] [Rmmm]: Duplication mode. The second extruder will duplicate the first with nnn
-   *                         units x-offset and an optional differential hotend temperature of
-   *                         mmm degrees. E.g., with "M605 S2 X100 R2" the second extruder will duplicate
-   *                         the first with a spacing of 100mm in the x direction and 2 degrees hotter.
+   *   M605 S0 : (FULL_CONTROL) The slicer has full control over both X-carriages and can achieve optimal travel
+   *             results as long as it supports dual X-carriages.
    *
-   *    Note: the X axis should be homed after changing dual x-carriage mode.
+   *   M605 S1 : (AUTO_PARK) The firmware automatically parks and unparks the X-carriages on tool-change so that
+   *             additional slicer support is not required.
+   *
+   *   M605 S2 X R : (DUPLICATION) The firmware moves the second X-carriage and extruder in synchronization with
+   *             the first X-carriage and extruder, to print 2 copies of the same object at the same time.
+   *             Set the constant X-offset and temperature differential with M605 S2 X[offs] R[deg] and
+   *             follow with "M605 S2" to initiate duplicated movement. For example, use "M605 S2 X100 R2" to
+   *             make a copy 100mm to the right with E1 2° hotter than E0.
+   *
+   *   M605 S3 : (MIRRORED) Formbot/Vivedino-inspired mirrored mode in which the second extruder duplicates
+   *             the movement of the first except the second extruder is reversed in the X axis.
+   *             The temperature differential and initial X offset must be set with "M605 S2 X[offs] R[deg]",
+   *             then followed by "M605 S3" to initiate mirrored movement.
+   *
+   *    M605 W  : IDEX What? command.
+   *
+   *    Note: the X axis should be homed after changing Dual X-carriage mode.
    */
   inline void gcode_M605() {
-    stepper.synchronize();
-    if (code_seen('S')) dual_x_carriage_mode = (DualXMode)code_value_byte();
-    switch (dual_x_carriage_mode) {
-      case DXC_FULL_CONTROL_MODE:
-      case DXC_AUTO_PARK_MODE:
-        break;
-      case DXC_DUPLICATION_MODE:
-        if (code_seen('X')) duplicate_extruder_x_offset = max(code_value_linear_units(), X2_MIN_POS - x_home_pos(0));
-        if (code_seen('R')) duplicate_extruder_temp_offset = code_value_temp_diff();
-        SERIAL_ECHO_START;
-        SERIAL_ECHOPGM(MSG_HOTEND_OFFSET);
-        SERIAL_CHAR(' ');
-        SERIAL_ECHO(hotend_offset[X_AXIS][0]);
-        SERIAL_CHAR(',');
-        SERIAL_ECHO(hotend_offset[Y_AXIS][0]);
-        SERIAL_CHAR(' ');
-        SERIAL_ECHO(duplicate_extruder_x_offset);
-        SERIAL_CHAR(',');
-        SERIAL_ECHOLN(hotend_offset[Y_AXIS][1]);
-        break;
-      default:
-        dual_x_carriage_mode = DEFAULT_DUAL_X_CARRIAGE_MODE;
-        break;
+     stepper.synchronize();
+
+    if (code_seen('S')) {
+      const DualXMode previous_mode = dual_x_carriage_mode;
+
+      if (code_seen('S')) dual_x_carriage_mode = (DualXMode)code_value_byte();
+      mirrored_duplication_mode = false;
+
+      if (dual_x_carriage_mode == DXC_MIRRORED_MODE) {
+        if (previous_mode != DXC_DUPLICATION_MODE) {
+          SERIAL_ECHOLNPGM("Printer must be in DXC_DUPLICATION_MODE prior to ");
+          SERIAL_ECHOLNPGM("specifying DXC_MIRRORED_MODE.");
+          dual_x_carriage_mode = DEFAULT_DUAL_X_CARRIAGE_MODE;
+          return;
+        }
+        mirrored_duplication_mode = true;
+        stepper.set_directions();
+        float x_jog = current_position[X_AXIS] - .1;
+        for (uint8_t i = 2; --i;) {
+          planner.buffer_line(x_jog, current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS], feedrate_mm_s, 0);
+          x_jog += .1;
+        }
+        return;
+      }
+
+      switch (dual_x_carriage_mode) {
+        case DXC_FULL_CONTROL_MODE:
+        case DXC_AUTO_PARK_MODE:
+          break;
+        case DXC_DUPLICATION_MODE:
+          if (code_seen('X')) duplicate_extruder_x_offset = max(code_value_linear_units(), X2_MIN_POS - x_home_pos(0));
+          if (code_seen('R')) duplicate_extruder_temp_offset = code_value_temp_diff();
+          if (active_extruder != 0) tool_change(0);
+          break;
+        default:
+          dual_x_carriage_mode = DEFAULT_DUAL_X_CARRIAGE_MODE;
+          break;
+      }
+      active_extruder_parked = false;
+      extruder_duplication_enabled = false;
+      stepper.set_directions();
+      delayed_move_time = 0;
     }
-    active_extruder_parked = false;
-    extruder_duplication_enabled = false;
-    delayed_move_time = 0;
+    else if (!code_seen('W'))  // if no S or W parameter, the DXC mode gets reset to the user's default
+      dual_x_carriage_mode = DEFAULT_DUAL_X_CARRIAGE_MODE;
   }
 
 #elif ENABLED(DUAL_NOZZLE_DUPLICATION_MODE)
@@ -10004,28 +9970,6 @@ void process_next_command() {
           gcode_M0_M1();
           break;
       #endif // ULTIPANEL
-	  /*
-	  //MKS
-	  #ifdef LASER
-	    case 3:
-	    digitalWrite(LASER_PIN,HIGH);
-        break;
-	    case 5:       //LASER OFF
-		digitalWrite(LASER_PIN,LOW);
-        break;
-		#endif
-		*/
-		
-		#ifdef LED
-	    case 225:
-		digitalWrite(LED4_PIN,HIGH);    //LED  ON
-        //led_flag=++led_flag;
-		break;
-	    case 224:
-		digitalWrite(LED4_PIN,LOW);    //LED  OFF
-		//led_flag=--led_flag;
-        break;
-		#endif
 
       case 17: // M17: Enable all stepper motors
         gcode_M17();
@@ -10529,19 +10473,6 @@ void process_next_command() {
           gcode_M600();
           break;
       #endif // FILAMENT_CHANGE_FEATURE
-      
-      case 601: // M601: E0 Unload 
-          gcode_M601();
-          break;
-      case 602: // M602: E1 Unload 
-          gcode_M602();
-          break;
-     case 603: // M603: E0 Load
-          gcode_M603();
-          break;
-     case 604: // M604: E1 Load
-          gcode_M604();
-          break;
 
       #if ENABLED(DUAL_X_CARRIAGE)
         case 605: // M605: Set Dual X Carriage movement mode
@@ -11999,9 +11930,12 @@ void disable_all_steppers() {
 void manage_inactivity(bool ignore_stepper_queue/*=false*/) {
 
   #if ENABLED(FILAMENT_RUNOUT_SENSOR)
-   if ((IS_SD_PRINTING || print_job_timer.isRunning()) &&READ(FIL_RUNOUT_PIN) == FIL_RUNOUT_INVERTING){
-      handle_filament_runout();
-    }
+    if (IS_SD_PRINTING || print_job_timer.isRunning()) {
+      if (!active_extruder && (READ(FIL_RUNOUT_PIN) == FIL_RUNOUT_INVERTING)) 
+        handle_filament_runout();
+      if (active_extruder && (READ(FIL_RUNOUT2_PIN) == FIL_RUNOUT_INVERTING)) 
+        handle_filament_runout();
+  }
   #endif
 
   if (commands_in_queue < BUFSIZE) get_available_commands();
@@ -12247,7 +12181,6 @@ void stop() {
   }
 }
 
-
 /**
  * Marlin entry-point: Set up before the program loop
  *  - Set up the kill pin, filament runout, power hold
@@ -12277,8 +12210,6 @@ void setup() {
   #if ENABLED(FILAMENT_RUNOUT_SENSOR)
     setup_filrunoutpin();
   #endif
-
-  setup_duanpin();
 
   setup_killpin();
 
@@ -12431,16 +12362,6 @@ void setup() {
   #if ENABLED(ENDSTOP_INTERRUPTS_FEATURE)
     setup_endstop_interrupts();
   #endif
-  
-  #ifdef LED 
-  pinMode(LED4_PIN,OUTPUT);
-  pinMode(LASER_PIN,OUTPUT);
-  digitalWrite(LED4_PIN,LOW);
-  digitalWrite(LASER_PIN,LOW);
-  //int led_flag=0;
-  #endif
-
-
 }
 
 /*
@@ -12453,20 +12374,9 @@ void setup() {
  *  - Call endstop manager
  *  - Call LCD update
  */
-extern void lcd_sdcard_pause_();
- 
 void loop() {
   if (commands_in_queue < BUFSIZE) get_available_commands();
-  if((IS_SD_PRINTING || print_job_timer.isRunning())&&(digitalRead(E0_RUNOUT_PIN)==LOW||digitalRead(E1_RUNOUT_PIN)==LOW)){
-    delay(5);
-    if(card.sdprinting==true&&(digitalRead(E0_RUNOUT_PIN)==LOW||digitalRead(E1_RUNOUT_PIN)==LOW)){
-      stepper.synchronize();
-      lcd_sdcard_pause_();
-      digitalWrite(E0_RUNOUT_PIN,LOW);
-      digitalWrite(E1_RUNOUT_PIN,LOW);
-    }
-  }
-  
+
   #if ENABLED(SDSUPPORT)
     card.checkautostart(false);
   #endif

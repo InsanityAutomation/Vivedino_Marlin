@@ -19,7 +19,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
-#include "FlexiTimer2.h"
+
 #include "ultralcd.h"
 #if ENABLED(ULTRA_LCD)
 #include "Marlin.h"
@@ -119,8 +119,6 @@ uint16_t max_display_update_time = 0;
   void lcd_control_temperature_preheat_material2_settings_menu();
   void lcd_control_motion_menu();
   void lcd_control_filament_menu();
-  void lcd_preheat_menu();
-
 
   #if ENABLED(LCD_INFO_MENU)
     #if ENABLED(PRINTCOUNTER)
@@ -681,63 +679,13 @@ void kill_screen(const char* lcd_msg) {
   }
 
   #if ENABLED(SDSUPPORT)
-     void lcd_sdcard_pause() {
+
+    void lcd_sdcard_pause() {
       card.pauseSDPrint();
       print_job_timer.pause();
       #if ENABLED(PARK_HEAD_ON_PAUSE)
         enqueue_and_echo_commands_P(PSTR("M125"));
       #endif
-    }
-int counter=0;
-void flash();
-void flash1();
-
-void flash() {
-  FlexiTimer2::stop();
-  WRITE(BEEPER_PIN,HIGH);
-  FlexiTimer2::set(1000, flash1); 
-  FlexiTimer2::start();
-  counter++;
-  if(counter>20){
-    FlexiTimer2::stop();
-    counter=0;
-    WRITE(BEEPER_PIN,LOW);
-  }
-}
-
-void flash1() {
-  FlexiTimer2::stop();
-  WRITE(BEEPER_PIN,LOW);
-  FlexiTimer2::set(1000, flash); 
-  FlexiTimer2::start();
-  counter++;
-    if(counter>20){
-    FlexiTimer2::stop();
-    counter=0;
-    WRITE(BEEPER_PIN,LOW);
-  }
-}
-    
-    void lcd_sdcard_pause_() {
-      card.pauseSDPrint();
-      print_job_timer.pause();
-      #if ENABLED(PARK_HEAD_ON_PAUSE)
-        enqueue_and_echo_commands_P(PSTR("M125"));
-      #endif
-      stepper.synchronize();
-      FlexiTimer2::set(1000, flash); 
-      FlexiTimer2::start();
-/*
-      for(long i=0;i<5000;i++){WRITE(BEEPER_PIN,HIGH);SERIAL_PROTOCOLLNPGM();}
-      lcd_update();
-      for(long i=0;i<2000;i++){WRITE(BEEPER_PIN,LOW);SERIAL_PROTOCOLLNPGM();}
-      lcd_update();
-      for(long i=0;i<5000;i++){WRITE(BEEPER_PIN,HIGH);SERIAL_PROTOCOLLNPGM();}
-      lcd_update();
-      for(long i=0;i<2000;i++){WRITE(BEEPER_PIN,LOW);SERIAL_PROTOCOLLNPGM();}
-      lcd_update();
- */
-
     }
 
     void lcd_sdcard_resume() {
@@ -881,7 +829,7 @@ void flash1() {
       #endif
     }
     MENU_ITEM(submenu, MSG_CONTROL, lcd_control_menu);
-    MENU_ITEM(submenu, "Pre Heat", lcd_preheat_menu);
+
     #if ENABLED(SDSUPPORT)
       if (card.cardOK) {
         if (card.isFileOpen()) {
@@ -1100,16 +1048,6 @@ void flash1() {
     // ^ Main
     //
     MENU_BACK(MSG_MAIN);
-	
-	#ifdef LED
-	MENU_ITEM(gcode, MSG_LED_ON, PSTR("M225"));	
-	MENU_ITEM(gcode, MSG_LED_OFF, PSTR("M224"));
-	#endif
-	#ifdef LASER
-	MENU_ITEM(gcode, MSG_LASER_ON, PSTR("M3"));	
-	MENU_ITEM(gcode, MSG_LASER_OFF, PSTR("M5"));
-	#endif
-	//MKS
 
     //
     // Speed:
@@ -1210,8 +1148,8 @@ void flash1() {
     // Change filament
     //
     #if ENABLED(FILAMENT_CHANGE_FEATURE)
-      //if (!thermalManager.tooColdToExtrude(active_extruder))
-        //MENU_ITEM(function, MSG_FILAMENTCHANGE, lcd_enqueue_filament_change);
+      if (!thermalManager.tooColdToExtrude(active_extruder))
+        MENU_ITEM(function, MSG_FILAMENTCHANGE, lcd_enqueue_filament_change);
     #endif
 
     END_MENU();
@@ -1328,7 +1266,6 @@ void flash1() {
         lcd_preheat_m1_e0_only();
       #endif
     }
-    
     void lcd_preheat_m2_all() {
       #if HOTENDS > 1
         thermalManager.setTargetHotend(lcd_preheat_hotend_temp[1], 1);
@@ -1822,9 +1759,9 @@ void flash1() {
       //
       // Change filament
       //
-     #if ENABLED(FILAMENT_CHANGE_FEATURE)
-        //if (!thermalManager.tooColdToExtrude(active_extruder))
-          //MENU_ITEM(function, MSG_FILAMENTCHANGE, lcd_enqueue_filament_change);
+      #if ENABLED(FILAMENT_CHANGE_FEATURE)
+        if (!thermalManager.tooColdToExtrude(active_extruder))
+          MENU_ITEM(function, MSG_FILAMENTCHANGE, lcd_enqueue_filament_change);
       #endif
 
       //
@@ -1840,7 +1777,6 @@ void flash1() {
       //
       // Preheat for Material 1 and 2
       //
-      /*
       #if TEMP_SENSOR_1 != 0 || TEMP_SENSOR_2 != 0 || TEMP_SENSOR_3 != 0 || TEMP_SENSOR_BED != 0
         MENU_ITEM(submenu, MSG_PREHEAT_1, lcd_preheat_m1_menu);
         MENU_ITEM(submenu, MSG_PREHEAT_2, lcd_preheat_m2_menu);
@@ -1848,7 +1784,7 @@ void flash1() {
         MENU_ITEM(function, MSG_PREHEAT_1, lcd_preheat_m1_e0_only);
         MENU_ITEM(function, MSG_PREHEAT_2, lcd_preheat_m2_e0_only);
       #endif
-      */
+
     #endif // TEMP_SENSOR_0 != 0
 
     //
@@ -2216,7 +2152,7 @@ void flash1() {
     MENU_BACK(MSG_MAIN);
     MENU_ITEM(submenu, MSG_TEMPERATURE, lcd_control_temperature_menu);
     MENU_ITEM(submenu, MSG_MOTION, lcd_control_motion_menu);
-    //MENU_ITEM(submenu, MSG_FILAMENT, lcd_control_filament_menu);
+    MENU_ITEM(submenu, MSG_FILAMENT, lcd_control_filament_menu);
 
     #if HAS_LCD_CONTRAST
       //MENU_ITEM_EDIT(int3, MSG_CONTRAST, &lcd_contrast, 0, 63);
@@ -2235,37 +2171,6 @@ void flash1() {
     #endif
 
     MENU_ITEM(function, MSG_RESTORE_FAILSAFE, lcd_factory_settings);
-    END_MENU();
-  }
-
-  /**
-   *
-   * "pre heat" submenu
-   *
-   */
-  void  lcd_preheat_unload_menu(){
-    START_MENU();
-    MENU_BACK(MSG_MAIN);
-      MENU_ITEM(gcode, "E0 Unload Filament", PSTR("M601")); 
-      MENU_ITEM(gcode, "E1 Unload Filament", PSTR("M602"));
-    END_MENU();
-  } 
-  void  lcd_preheat_load_menu(){
-    START_MENU();
-    MENU_BACK(MSG_MAIN);
-      MENU_ITEM(gcode, "E0 Load Filament", PSTR("M603")); 
-      MENU_ITEM(gcode, "E1 Load Filament", PSTR("M604"));
-    END_MENU();
-  } 
-
-
-  void lcd_preheat_menu(){
-    START_MENU();
-    MENU_BACK(MSG_MAIN);
-      MENU_ITEM(submenu, MSG_PREHEAT_1, lcd_preheat_m1_menu);
-      MENU_ITEM(submenu, MSG_PREHEAT_2, lcd_preheat_m2_menu);
-      MENU_ITEM(submenu, "Unload Filament", lcd_preheat_unload_menu);
-      MENU_ITEM(submenu, "Load Filament", lcd_preheat_load_menu);
     END_MENU();
   }
 

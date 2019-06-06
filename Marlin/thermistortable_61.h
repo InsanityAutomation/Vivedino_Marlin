@@ -29,6 +29,8 @@
 // Resistance Tolerance     + / -1%
 // B Value             3950K at 25/50 deg. C
 // B Value Tolerance         + / - 1%
+#define OVERSAMPLENR 16
+#define OV(N) int16_t((N) * (OVERSAMPLENR))
 const short temptable_61[][2] PROGMEM = {
   { OV(   2.00), 420 }, // Guestimate to ensure we dont lose a reading and drop temps to -50 when over
   { OV(  12.07), 350 },

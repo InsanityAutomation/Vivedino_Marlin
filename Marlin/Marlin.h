@@ -56,7 +56,8 @@ void idle(
 void manage_inactivity(bool ignore_stepper_queue = false);
 
 #if ENABLED(DUAL_X_CARRIAGE) || ENABLED(DUAL_NOZZLE_DUPLICATION_MODE)
-  extern bool extruder_duplication_enabled;
+  extern bool extruder_duplication_enabled,       // Used in Dual X mode 2
+              mirrored_duplication_mode; 
 #endif
 
 #if HAS_X2_ENABLE
@@ -195,9 +196,6 @@ inline bool IsStopped() { return !Running; }
 bool enqueue_and_echo_command(const char* cmd, bool say_ok=false); // Add a single command to the end of the buffer. Return false on failure.
 void enqueue_and_echo_commands_P(const char * const cmd);          // Set one or more commands to be prioritized over the next Serial/SD command.
 void clear_command_queue();
-
-//MKS
-//extern int led_flag;
 
 extern millis_t previous_cmd_ms;
 inline void refresh_cmd_timeout() { previous_cmd_ms = millis(); }

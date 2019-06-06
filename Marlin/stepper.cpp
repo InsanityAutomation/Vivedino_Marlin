@@ -136,7 +136,7 @@ volatile long Stepper::endstops_trigsteps[XYZ];
   #define X_APPLY_DIR(v,ALWAYS) \
     if (extruder_duplication_enabled || ALWAYS) { \
       X_DIR_WRITE(v); \
-      X2_DIR_WRITE(v); \
+      X2_DIR_WRITE(mirrored_duplication_mode ? !(v) : v); \
     } \
     else { \
       if (current_block->active_extruder) X2_DIR_WRITE(v); else X_DIR_WRITE(v); \
