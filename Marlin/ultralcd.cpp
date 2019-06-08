@@ -1715,10 +1715,7 @@ void kill_screen(const char* lcd_msg) {
 	//
 	//led on and off
 	//
-	#ifdef LED
-	MENU_ITEM(gcode, MSG_LED_ON, PSTR("M225"));	
-	MENU_ITEM(gcode, MSG_LED_OFF, PSTR("M224"));
-	#endif
+
 	#ifdef LASER
 	MENU_ITEM(gcode, MSG_LASER_ON, PSTR("M3"));	
 	MENU_ITEM(gcode, MSG_LASER_OFF, PSTR("M5"));
