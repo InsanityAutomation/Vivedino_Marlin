@@ -657,10 +657,10 @@
   #define MESH_MIN_Y (Y_MIN_POS + MESH_INSET)
   #define MESH_MAX_Y (Y_MAX_POS - (MESH_INSET))
 #elif ENABLED(AUTO_BED_LEVELING_UBL)
-  #define UBL_MESH_MIN_X (X_MIN_POS + UBL_MESH_INSET_X)
-  #define UBL_MESH_MAX_X (X_MAX_POS - (UBL_MESH_INSET_X))
-  #define UBL_MESH_MIN_Y (Y_MIN_POS + UBL_MESH_INSET_Y)
-  #define UBL_MESH_MAX_Y (Y_MAX_POS - (UBL_MESH_INSET_Y))
+  #define UBL_MESH_MIN_X (3 + UBL_MESH_INSET_X)
+  #define UBL_MESH_MAX_X (400 - (UBL_MESH_INSET_X))
+  #define UBL_MESH_MIN_Y (35 + UBL_MESH_INSET_Y)
+  #define UBL_MESH_MAX_Y (400 - (UBL_MESH_INSET_Y))
 
   // If this is defined, the currently active mesh will be saved in the
   // current slot on M500.
