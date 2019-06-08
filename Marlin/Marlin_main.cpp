@@ -8943,23 +8943,25 @@ inline void gcode_M503() {
    *    Note: the X axis should be homed after changing Dual X-carriage mode.
    */
   inline void gcode_M605() {
+
      stepper.synchronize();
 
-    if (code_seen('S')) {
-      const DualXMode previous_mode = dual_x_carriage_mode;
+    const DualXMode previous_mode = dual_x_carriage_mode;
+    if (code_seen('S')) dual_x_carriage_mode = (DualXMode)code_value_byte();
+      SERIAL_ECHOLNPAIR("Mode Change ", dual_x_carriage_mode);
+      SERIAL_ECHOLNPAIR("From Mode ", previous_mode);
 
-      if (code_seen('S')) dual_x_carriage_mode = (DualXMode)code_value_byte();
       mirrored_duplication_mode = false;
 
       if (dual_x_carriage_mode == DXC_MIRRORED_MODE) {
         if (previous_mode != DXC_DUPLICATION_MODE) {
-          SERIAL_ECHOLNPGM("Printer must be in DXC_DUPLICATION_MODE prior to ");
-          SERIAL_ECHOLNPGM("specifying DXC_MIRRORED_MODE.");
+          SERIAL_ECHOLN("Printer must be in DXC_DUPLICATION_MODE prior to ");
+          SERIAL_ECHOLN("specifying DXC_MIRRORED_MODE.");
           dual_x_carriage_mode = DEFAULT_DUAL_X_CARRIAGE_MODE;
           return;
         }
+        SERIAL_ECHOLN("DXC_MIRRORED_MODE Set");
         mirrored_duplication_mode = true;
-        stepper.set_directions();
         float x_jog = current_position[X_AXIS] - .1;
         for (uint8_t i = 2; --i;) {
           planner.buffer_line(x_jog, current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS], feedrate_mm_s, 0);
@@ -8970,25 +8972,26 @@ inline void gcode_M503() {
 
       switch (dual_x_carriage_mode) {
         case DXC_FULL_CONTROL_MODE:
+          SERIAL_ECHOLN("DXC_FULL_CONTROL_MODE Set");
+          break;
         case DXC_AUTO_PARK_MODE:
+          SERIAL_ECHOLN("DXC_AUTO_PARK_MODE Set");
           break;
         case DXC_DUPLICATION_MODE:
+          SERIAL_ECHOLN("DXC_DUPLICATION_MODE Set");
           if (code_seen('X')) duplicate_extruder_x_offset = max(code_value_linear_units(), X2_MIN_POS - x_home_pos(0));
           if (code_seen('R')) duplicate_extruder_temp_offset = code_value_temp_diff();
           if (active_extruder != 0) tool_change(0);
           break;
         default:
+          SERIAL_ECHOLN("Default Mode Set");
           dual_x_carriage_mode = DEFAULT_DUAL_X_CARRIAGE_MODE;
           break;
       }
       active_extruder_parked = false;
       extruder_duplication_enabled = false;
-      stepper.set_directions();
       delayed_move_time = 0;
     }
-    else if (!code_seen('W'))  // if no S or W parameter, the DXC mode gets reset to the user's default
-      dual_x_carriage_mode = DEFAULT_DUAL_X_CARRIAGE_MODE;
-  }
 
 #elif ENABLED(DUAL_NOZZLE_DUPLICATION_MODE)
 
